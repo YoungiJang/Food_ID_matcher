@@ -1,0 +1,7 @@
+# Python 3.14 에서 검증한 버전. prepare / evaluate / compare / lookup 은 표준 라이브러리만 쓴다.
+torch==2.15.0
+transformers==5.22.1
+sentence-transformers==6.2.0
+accelerate==1.15.0
+bitsandbytes==0.50.2
+huggingface_hub==2.4.0

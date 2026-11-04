@@ -1,0 +1,20 @@
+# 원본 데이터: scripts/download_data.sh 로 내려받는다 (V-Nutri 는 재배포 조건이 있음)
+data/raw/
+# prepare 가 원본에서 다시 만든다
+data/fndds_nutrients.csv
+data/fndds_recipes.csv
+data/vnutri_ids.csv
+# 실행할 때마다 덮어쓰는 검색 결과 (각 실행의 사본은 results/<run>/ 에 있음)
+data/retrieval_candidates.csv
+
+# 파이프라인 실행 결과 (매핑, 평가, 실험 기록): 직접 실행해서 만든다. 최종 매핑 테이블만 포함
+results/*
+!results/vnutri_fndds_map.csv
+
+# 클러스터별 작업 스크립트
+slurm/
+
+.venv/
+__pycache__/
+logs/
+*.pyc

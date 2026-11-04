@@ -1,0 +1,97 @@
+recipe_key,rewrite
+P01_R03,"Pasta with black pepper and cheese, home recipe"
+P01_R03,"Penne pasta dish with black pepper, grated Parmesan cheese, and butter"
+P01_R05,"Cake with biscuit crumb base and chocolate filling, home recipe"
+P01_R05,"Layered cake made with crushed biscuits, butter, cocoa powder, and condensed milk"
+P01_R06,"Carrot soup, home recipe"
+P01_R06,"Soup made with carrots, onions, seasoned with salted butter, chicken stock, spice mix, and garnished with coriander."
+P01_R09,"Fruit and biscuit-based confectionery, home recipe"
+P01_R09,"Date and biscuit mixture formed into balls, with added butter"
+P03_R01,"Lentil and squash curry, home recipe"
+P03_R01,"Curry made with red lentils, butternut squash, onions, spring greens, seasoned with garlic, coconut, and ginger in coconut milk and lentil stock"
+P03_R02,"Beef substitute stir-fry with mushrooms and sauce, home recipe"
+P03_R02,"Stir-fried onions and mushrooms with plant-based burger pieces, served over potatoes in a sauce made with sour cream, tomato puree, mushroom stock, and seasonings"
+P03_R04,Omelet or frittata with potatoes and onions
+P03_R04,"Potato and onion omelet made with eggs, olive oil, and salt"
+P03_R05,Unleavened flatbread dough
+P03_R05,"Flatbread dough made with flour, water, dried yeast, salt, and olive oil"
+P03_R06,Roasted leafy greens
+P03_R06,Kale leaves roasted with olive oil and salt
+P03_R07,Pizza with vegetable and egg toppings
+P03_R07,"Pizza crust topped with tomato sauce, sliced aubergine, eggs, and mozzarella cheese, seasoned with salt and black pepper, cooked in sunflower oil"
+P03_R08,"Tomato-based sauce, home recipe"
+P03_R08,"Sauce made with tomato passata, garlic, and olive oil"
+P03_R09,Pizza with plant-based meat and mushrooms
+P03_R09,"Flatbread topped with tomato sauce, plant-based minced meat, sliced mushrooms, mozzarella cheese, seasoned with garlic powder, salt, and black pepper"
+P04_R01,Grilled chicken with vegetables and sauce in a wrap
+P04_R01,"Grilled chicken breast with seasonings, served in a wholemeal tortilla with romaine lettuce, brown onions, vine tomatoes, and a yogurt-sriracha sauce"
+P04_R02,"Scrambled egg with vegetables, home recipe"
+P04_R02,"Scrambled egg prepared with green peppers, mushrooms, and bell pepper, seasoned with salt and black pepper, cooked in olive oil"
+P04_R03,Cereal with milk and spices
+P04_R03,Granola cereal with unsweetened almond milk and ground cinnamon
+P04_R04,"Potato filling with spices, home recipe"
+P04_R04,"Mashed potato mixture with green chillies, onions, ginger, coriander, mustard seeds, urad dal, turmeric, salt, and olive oil"
+P04_R05,"Indian-style crepe filled with spiced potato mixture, home recipe"
+P04_R05,"Crepe made from dosa batter, served with a filling of spiced potatoes, prepared with ghee and olive oil"
+P04_R06,"Rice dish with peas, home recipe"
+P04_R06,"Basmati rice cooked with green peas, mixed spices including cinnamon, cardamom, and cloves, garnished with cashews and flavored with onion, garlic, and lemon juice"
+P05_R01,Chickpea and spinach curry with rice
+P05_R01,"Curry made with chickpeas, spinach, and a blend of spices including turmeric, curry powder, and garam masala, cooked in coconut milk and served with rice"
+P05_R02,Hot cereal with fruit and nuts
+P05_R02,"Oatmeal cooked in water and milk, topped with sliced banana, pecans, and raisins"
+P05_R03,"Pasta with pesto sauce, home recipe"
+P05_R03,"Pasta dish with basil, nuts, and cheese pesto sauce, mixed with vegetables like peas, lettuce, and tomatoes"
+P05_R05,"Chocolate pudding, home recipe"
+P05_R05,"Sweet dessert pudding made with chocolate, eggs, sugar, butter, and flour"
+P06_R01,"Tomato and vegetable pancake, home recipe"
+P06_R01,"Pancake made with uttapam mix, topped with tomatoes, coriander, onions, served with salted butter and ketchup"
+P06_R02,"Beverage, coffee with milk and sugar"
+P06_R02,"Coffee beverage prepared with coffee, milk, and sugar"
+P06_R03,"Stir-fried paneer with tomato-based sauce, home recipe"
+P06_R03,"Paneer stir-fry with tomato, onion, and spices, prepared in butter"
+P06_R05,"Stuffed flatbread with potato filling, home recipe"
+P06_R05,"Whole wheat flatbread filled with cooked mashed potatoes, prepared with vegetable oil and served with butter"
+P06_R06,Egg dish with bread and vegetables
+P06_R06,"Omelet made with eggs, cubed white bread, sautéed onions, seasoned with salt and chili powder, cooked in salted butter"
+P06_R07,"Beverage, coffee with milk and sugar"
+P06_R07,"Coffee beverage prepared with coffee, milk, and sugar"
+P07_R01,"Beverage, coffee, prepared with water"
+P07_R01,"Hot beverage, made from ground coffee beans"
+P07_R02,"Chopped vegetable and legume salad with cheese, home recipe"
+P07_R02,"Salad made with chickpeas, mixed vegetables including lettuce, tomatoes, cucumber, and olives, seasoned with herbs and cheese"
+P07_R03,"Risotto with mixed mushrooms, home recipe"
+P07_R03,"Risotto made with Arborio rice, mixed mushrooms (dried, chestnut, shiitake), onions, garlic, white wine, vegetable stock, and Parmesan cheese"
+P07_R04,Cookies with banana and chocolate chips
+P07_R04,"Banana-flavored cookies made with mashed bananas, chocolate chips, and typical cookie ingredients like flour, sugar, and baking soda"
+P07_R05,"Beverage, coffee, prepared with water"
+P07_R05,"Hot beverage, made from ground coffee beans"
+P07_R06,"Beverage, coffee, prepared with water"
+P07_R06,"Hot beverage, made from ground coffee beans"
+P07_R07,"Salad with avocado, beans, and corn, seasoned with spices"
+P07_R07,"Mixed salad with avocado, black beans, sweetcorn, and sweet potato, dressed with greek yogurt and olive oil, garnished with parsley and spiced with cumin and chili powder"
+P08_R01,"Beverage, coffee, prepared with water"
+P08_R01,"Hot beverage, made from ground coffee beans"
+P08_R03,"Scrambled eggs with vegetables and herbs, home recipe"
+P08_R03,"Scrambled eggs with red onions, finger chillies, fat-free cottage cheese, seasoned with black pepper, salt, and oregano"
+P08_R04,Salad with chicken and tabbouleh mix
+P08_R04,"Chicken salad with tabbouleh, mixed vegetables, seeds, and herbs"
+P08_R05,Grilled salmon and vegetable skewers with teriyaki sauce
+P08_R05,"Salmon, broccoli, chickpeas, spinach, and quinoa skewered and grilled with a teriyaki glaze"
+P08_R06,Pasta salad with tuna and vegetables
+P08_R06,"Fusilli pasta salad with canned tuna, mixed vegetables including red bell pepper, carrots, celery, red onion, cherry tomatoes, cucumber, dressed with olive oil, balsamic glaze, and seasoned with coriander, oregano, garlic powder, salt, and black pepper."
+P08_R07,Fish cakes with mixed vegetables and couscous
+P08_R07,"Cod and salmon fish cakes served with a variety of vegetables including broccoli, green beans, red bell peppers, and red onions, accompanied by sundried tomato couscous seasoned with garlic, oregano, sesame oil, salt, and black pepper"
+P08_R08,"Pasta with meat sauce, home recipe"
+P08_R08,"Spaghetti served with a tomato-based meat sauce made from ground beef, mixed vegetables including mushrooms, bell peppers, carrots, celery, and tomatoes, seasoned with herbs and spices."
+P08_R09,Cucumber salad with Asian seasonings
+P08_R09,"Cucumber salad, made with cucumber, ginger, chili oil, sesame oil, garlic, and soy sauce"
+P09_R02,Fried chicken and cheese balls
+P09_R02,"Deep-fried mixture of mashed potatoes, chopped chicken breast, mozzarella cheese, seasoned with black pepper, chili powder, salt, and garlic powder, coated in gluten-free flour and breadcrumbs"
+P09_R03,Herbal tea with added sugar
+P09_R03,"Infused drink made from hibiscus flowers, ginger, and sweetened with sugar"
+P09_R04,"Beef in spiced sauce, home recipe"
+P09_R04,"Beef stew with yogurt and spices, prepared with onions, garlic, ginger, and a blend of spices including cardamom, cloves, cinnamon, garam masala, turmeric, and chili"
+P09_R05,"Fruit smoothie, with whole fruit and dairy"
+P09_R05,"Smoothie made with mango, yogurt, coconut milk, sweetened with honey, blended with ice and water"
+P09_R06,Fried potatoes and grilled beef skewers with vegetables
+P09_R06,"Potatoes fried in oil and beef skewers grilled with onions, scotch bonnet chili, tomatoes, and seasoned with garlic-ginger paste and peri-peri seasoning"
