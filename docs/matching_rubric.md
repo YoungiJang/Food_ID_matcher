@@ -1,6 +1,6 @@
 # 매칭 판단 기준
 
-선택 모델(`llm-match`)과 검토 모델(`llm-review`)이 `data/retrieval_candidates.csv`의 후보 30개 중에서 하나를 고를 때 쓰는 기준입니다. 같은 규칙을 LLM용 영문으로 옮긴 것이 `food_matcher.py`의 `RULES`이고, 둘을 함께 고칩니다.
+선택 모델(`llm-match`)과 검토 모델(`llm-review`)이 `data/retrieval_candidates.csv`의 후보(최종 설정은 40개) 중에서 하나를 고를 때 쓰는 기준입니다. 같은 규칙을 LLM용 영문으로 옮긴 것이 `food_matcher.py`의 `RULES_V2`(`--rules v2`, 최종 설정)와 `RULES`(`--rules v1`)이고, 둘을 함께 고칩니다. v2에서 추가된 부분은 **(v2)**로 표시했습니다.
 
 ## 입력으로 쓰는 정보
 - 레시피 이름, V-Nutri 식재료 목록
@@ -8,11 +8,11 @@
 - **V-Nutri 실측 영양값은 쓰지 않습니다.** `evaluate`에서 독립 검증 지표로 쓰기 위해서입니다.
 
 ## 선택 규칙 (위에서부터 우선)
-1. **후보 목록 안에서만 고릅니다.** 요리 종류와 주재료가 모두 맞는 후보가 없으면 0(매칭 없음)을 고릅니다. 종류가 다른 요리를 고르는 것보다 매칭 없음이 낫습니다.
+1. **후보 목록 안에서만 고릅니다.** 요리 종류와 주재료가 모두 맞는 후보가 없으면 0(매칭 없음)을 고릅니다. 종류가 다른 요리를 고르는 것보다 매칭 없음이 낫습니다. **(v2)** 경단, 케이크, 쿠키, 샐러드, 커리 같은 조리된 요리에 비슷한 종류의 조리 요리 후보가 있으면, 원재료나 기본 주식(예: Date Balls → Date)을 고르지 않습니다.
 2. **요리 정체성:** 요리 종류(커리, 피자, 샐러드, 수프, 음료 등)가 같아야 합니다.
 3. **주재료:** 이름보다 식재료 목록을 따릅니다. 예: 이름이 "beef"여도 plant-based burger로 만들었으면 채식 항목입니다.
-4. **조리 방식:** 기름, 버터, 기가 재료에 있으면 `fat added` / `made with oil`, 없으면 `no added fat`. 가정 조리이므로 `home recipe`를 `restaurant`, `ready-to-heat`, `frozen`보다 우선합니다.
-5. **일반 항목 우선:** 재료에 근거가 없으면 브랜드나 특수 변형(`reduced sodium`, `gluten free`, `decaffeinated`, `egg white` 등)보다 일반 항목(`NFS`, 기본형)을 고릅니다.
+4. **조리 방식:** **(v2)** 요리 이름에 있거나 암시된 조리법(grilled, roasted, fried, baked, raw, no-bake)과 맞춥니다. 기름, 버터, 기가 재료에 있으면 `fat added` / `made with oil`, 없으면 `no added fat`. 가정 조리이므로 `home recipe`를 `restaurant`, `ready-to-heat`, `frozen`보다 우선합니다.
+5. **일반 항목 우선:** 재료에 근거가 없으면 브랜드나 특수 변형(`reduced sodium`, `gluten free`, `decaffeinated` 등)보다 일반 항목(`NFS`, 기본형)을 고릅니다. **(v2)** `egg white` 항목은 흰자만 쓰고 전란을 쓰지 않을 때만 고릅니다.
 6. **복합 요리:** 이름에서 첫 번째로 나오는 요리를 대표로 고르고, 나머지는 reason에 적습니다.
 
 ## match_type
@@ -29,4 +29,4 @@
 |---|---|
 | accept | 선택 결과 유지 |
 | reject + 다른 후보 c 제안 | 선택 단계에서 c가 1표 이상 받았으면 c로 교체, 아니면 선택 결과 유지 (둘 다 `low`) |
-| reject + 0(맞는 후보 없음) | 선택 득표율이 0.8 미만이면 `none`, 아니면 선택 결과 유지 (둘 다 `low`) |
+| reject + 0(맞는 후보 없음) | `--none-policy none`: 선택 득표율이 0.8 미만이면 `none`, 아니면 선택 결과 유지. `--none-policy keep`(최종 설정): 선택 결과 유지 (둘 다 `low`) |

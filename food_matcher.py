@@ -221,20 +221,37 @@ Do not use brand names. Use the ingredient list when the dish name is misleading
 Answer with one JSON object only: {"descriptions": ["...", "..."]}"""
 
 
+# v2: 설명을 4개로 늘리고 넓은 범주와 다른 표현을 추가 (검색에서 맞는 후보를 놓치는 경우를 줄이려는 것)
+REWRITE_PROMPT_V2 = """You describe a home-cooked dish the way the USDA FNDDS food database names its foods.
+FNDDS names are generic and describe what the food is made of, for example:
+  "Pasta with tomato-based sauce and meat, home recipe", "Egg omelet or scrambled egg, with vegetables, fat added",
+  "Lentil curry with rice", "Cucumber salad, made with Italian dressing", "Fruit smoothie, with whole fruit and dairy".
+
+Given the dish name and its ingredients, write 4 such descriptions:
+1. the closest generic dish name (translate non-English or regional dish names into what the dish is),
+2. a description of the main components and preparation (cooking method, added fat),
+3. a broader food category the dish belongs to (e.g. "soup", "sandwich", "stir-fry", "baked dessert"),
+4. another FNDDS-style phrasing of the dish, using different words from 1 and 2.
+Do not use brand names. Use the ingredient list when the dish name is misleading.
+
+Answer with one JSON object only: {"descriptions": ["...", "...", "...", "..."]}"""
+REWRITE_PROMPTS = {"v1": REWRITE_PROMPT, "v2": REWRITE_PROMPT_V2}
+
+
 def validate_rewrite(ans):
     d = ans.get("descriptions")
-    if not isinstance(d, list) or not 1 <= len(d) <= 3 or not all(isinstance(x, str) and x.strip() for x in d):
-        return "descriptions must be a list of 1-3 non-empty strings"
+    if not isinstance(d, list) or not 1 <= len(d) <= 5 or not all(isinstance(x, str) and x.strip() for x in d):
+        return "descriptions must be a list of 1-5 non-empty strings"
     return None
 
 
-def rewrite(out=QUERY_REWRITES, model_name=SELECT_MODEL, quantize="8bit", gpu=0):
+def rewrite(out=QUERY_REWRITES, model_name=SELECT_MODEL, quantize="8bit", gpu=0, prompt="v1"):
     """LLM 이 레시피마다 FNDDS 식 일반 영문 설명을 만든다. retrieve 의 검색 쿼리로 쓴다."""
     recipes = load_recipes(rewrites=None)
     generate = load_llm(model_name, quantize, gpu)
     rows, log = [], []
     for key, r in recipes.items():
-        ans, attempts = ask_json(generate, [{"role": "system", "content": REWRITE_PROMPT},
+        ans, attempts = ask_json(generate, [{"role": "system", "content": REWRITE_PROMPTS[prompt]},
                                             {"role": "user", "content": "\n".join(dish_lines(r))}],
                                  validate_rewrite)
         log.append({"recipe_key": key, "attempts": attempts})
@@ -297,7 +314,7 @@ def diversify(order, descriptions, k, per_head):
 
 
 def retrieve(out=CANDIDATES, model_name=EMBED_MODEL, k=30, per_head=6, rewrites=QUERY_REWRITES,
-             rerank=False, rerank_pool=80):
+             rerank=False, rerank_pool=80, keep_rrf=0):
     """레시피마다 여러 순위표를 RRF(각 순위표에서 1/(60+순위) 합산)로 합쳐 후보 top-k 를 뽑는다.
 
     순위표:
@@ -305,6 +322,7 @@ def retrieve(out=CANDIDATES, model_name=EMBED_MODEL, k=30, per_head=6, rewrites=
     - 임베딩: 이름+식재료 × FNDDS 이름+구성 재료 (재료끼리 비교)
     - 키워드: 쿼리(이름, 재작성 설명들) × FNDDS 이름
     rerank 이면 RRF 상위 rerank_pool 개를 크로스 인코더(bge-reranker-v2-m3)로 다시 정렬한 뒤 top-k 를 고른다.
+    keep_rrf > 0 이면 재정렬과 관계없이 RRF 상위 keep_rrf 개를 후보에 남긴다 (재순위화가 좋은 후보를 밀어내는 경우 대비).
     크로스 인코더는 (레시피 이름+식재료, FNDDS 이름+구성 재료) 쌍을 함께 읽어 관련도를 매긴다.
     정답 영양값은 쓰지 않는다.
     """
@@ -346,8 +364,12 @@ def retrieve(out=CANDIDATES, model_name=EMBED_MODEL, k=30, per_head=6, rewrites=
             pool = diversify(order, descriptions, rerank_pool, per_head)
             query = f'{r["name"]}. Ingredients: {", ".join(r["ingredients"])}'
             relevance = reranker.predict([(query, doc_texts[i]) for i in pool], batch_size=32)
+            rrf_top = diversify(order, descriptions, keep_rrf, per_head) if keep_rrf else []
             score = {i: float(s) for i, s in zip(pool, relevance)}
-            order = sorted(pool, key=lambda i: -score[i])
+            reranked = sorted(pool, key=lambda i: -score[i])
+            kept = set(rrf_top)
+            order = rrf_top + [i for i in reranked if i not in kept][:max(k - len(rrf_top), 0)]
+            order = sorted(order, key=lambda i: -score.get(i, -1e9))  # 출력 순서는 재순위화 점수
         for rk, i in enumerate(diversify(order, descriptions, k, per_head), 1):
             rows.append([key, r["name"], "; ".join(r["ingredients"]), rk, round(score[i], 4),
                          fndds[i][0], descriptions[i]])
@@ -389,11 +411,31 @@ RULES = """Rules, in priority order:
 
 match_type: "exact" = same dish and preparation; "approx" = similar dish or main component only; "none" = choice 0."""
 
-SELECT_PROMPT = f"""You map a home-cooked dish to the single best matching entry of the USDA FNDDS food database.
+# v2: 개발 중 남은 오류 유형(원재료 선택, 조리 방식 불일치, 특수 변형)을 일반 원칙으로 보강한 규칙
+RULES_V2 = """Rules, in priority order:
+1. Choose only from the numbered candidates. Choose 0 when no candidate has the same dish type AND the same main components.
+   A wrong dish type is worse than no match: never pick a raw ingredient for a cooked dish, a different dish for a sauce, etc.
+   For a composed dish (balls, cakes, cookies, salads, curries, skewers, pizzas, ...), never choose a single raw ingredient
+   or plain staple when a prepared-dish candidate of a similar type exists.
+2. Dish identity: the candidate must be the same kind of dish (curry, pizza, salad, soup, drink, ...).
+3. Main ingredients: the ingredient list overrides the dish name (e.g. a "beef" dish made with plant-based burgers is vegetarian).
+4. Preparation: match the cooking method named in the dish or implied by it (grilled, roasted, fried, baked, raw, no-bake).
+   If oil or butter is an ingredient prefer "fat added" / "made with oil"; otherwise "no added fat".
+   The dish is home cooked from fresh ingredients: prefer "home recipe" or fresh forms over "restaurant", "ready-to-heat",
+   "frozen" or "canned".
+5. Prefer generic entries (NFS, plain) over brands or special variants (reduced sodium, gluten free, decaffeinated) unless
+   the ingredients say so. Choose an "egg white" entry only if the dish uses egg whites and no whole eggs.
+6. For a combination of two dishes, match the first dish named and mention the other in the reason.
+
+match_type: "exact" = same dish and preparation; "approx" = similar dish or main component only; "none" = choice 0."""
+RULE_SETS = {"v1": RULES, "v2": RULES_V2}
+
+def select_prompt(rules):
+    return f"""You map a home-cooked dish to the single best matching entry of the USDA FNDDS food database.
 You are given the dish name, its ingredient list, and a numbered list of FNDDS candidates (in random order),
 each with the main ingredients of its FNDDS recipe. Compare ingredients, not only names.
 
-{RULES}
+{rules}
 
 Work in this order and write it into the JSON:
 1. "dish_type": what kind of dish this is, in a few words.
@@ -404,6 +446,9 @@ Work in this order and write it into the JSON:
 
 Answer with one JSON object only:
 {{"dish_type": "...", "main_ingredients": ["..."], "fat_added": true, "shortlist": [<n>, ...], "choice": <n or 0>, "match_type": "exact|approx|none", "reason": "<one short sentence>"}}"""
+
+
+SELECT_PROMPT = select_prompt(RULES)
 
 
 def validate_selection(n_candidates):
@@ -421,7 +466,8 @@ def vote_confidence(share):
     return "high" if share >= 0.8 else "medium" if share >= 0.6 else "low"
 
 
-def llm_match(out=MAPPING_SELECT, model_name=SELECT_MODEL, top=30, runs=5, seed=0, quantize="8bit", gpu=0):
+def llm_match(out=MAPPING_SELECT, model_name=SELECT_MODEL, top=30, runs=5, seed=0, quantize="8bit", gpu=0,
+              rules="v1"):
     """선택 모델이 레시피마다 후보 순서를 섞어 runs 번 고르고 다수결로 정한다. 정답 영양값은 쓰지 않는다.
 
     순서를 섞는 이유: LLM 은 목록 앞쪽을 고르는 경향(위치 편향)이 있다. 다수결 득표율(vote_share)을
@@ -442,7 +488,7 @@ def llm_match(out=MAPPING_SELECT, model_name=SELECT_MODEL, top=30, runs=5, seed=
             order = list(range(len(cands)))
             random.Random(f"{seed}-{key}-{run}").shuffle(order)
             shown = [cands[i] for i in order]
-            ans, attempts = ask_json(generate, [{"role": "system", "content": SELECT_PROMPT},
+            ans, attempts = ask_json(generate, [{"role": "system", "content": select_prompt(RULE_SETS[rules])},
                                                 {"role": "user", "content": "\n".join(
                                                     dish_lines(r) + candidate_lines(shown, ingredients))}],
                                      validate_selection(len(shown)))
@@ -471,11 +517,12 @@ def llm_match(out=MAPPING_SELECT, model_name=SELECT_MODEL, top=30, runs=5, seed=
     print(f"wrote {out}")
 
 
-REVIEW_PROMPT = f"""You review a proposed mapping of a home-cooked dish to an entry of the USDA FNDDS food database.
+def review_prompt(rules):
+    return f"""You review a proposed mapping of a home-cooked dish to an entry of the USDA FNDDS food database.
 Another model chose the proposed entry from the numbered candidates (each shown with the main ingredients of its
 FNDDS recipe). Check it independently against the rules, comparing ingredients, not only names.
 
-{RULES}
+{rules}
 
 Decide:
 - "accept" if the proposed entry is the best candidate under the rules (or, for a proposed 0, if truly no candidate fits).
@@ -483,6 +530,9 @@ Decide:
 
 Answer with one JSON object only:
 {{"verdict": "accept|reject", "better_choice": <n, 0, or null when accepting>, "reason": "<one short sentence>"}}"""
+
+
+REVIEW_PROMPT = review_prompt(RULES)
 
 
 def validate_review(n_candidates, proposed):
@@ -500,7 +550,7 @@ def validate_review(n_candidates, proposed):
 
 
 def llm_review(selection=MAPPING_SELECT, out=MAPPING, model_name=REVIEW_MODEL, top=30, quantize="8bit", gpu=0,
-               runs=1, seed=0, none_policy="none"):
+               runs=1, seed=0, none_policy="none", rules="v1"):
     """검토 모델(선택 모델과 다른 계열)이 선택 결과를 검토하고, 아래 규칙으로 최종 매핑을 정한다.
 
     - accept: 선택 결과 유지, confidence 는 선택 단계의 득표율 기준
@@ -532,7 +582,7 @@ def llm_review(selection=MAPPING_SELECT, out=MAPPING, model_name=REVIEW_MODEL, t
             proposed = number.get(s["fdc_id"], 0)
             user = "\n".join(dish_lines(r) + candidate_lines(shown, ingredients)
                              + [f"Proposed: {proposed}. {s['fndds_description']}" if proposed else "Proposed: 0 (no match)"])
-            one, attempts = ask_json(generate, [{"role": "system", "content": REVIEW_PROMPT},
+            one, attempts = ask_json(generate, [{"role": "system", "content": review_prompt(RULE_SETS[rules])},
                                                 {"role": "user", "content": user}],
                                      validate_review(len(shown), proposed))
             log.append({"recipe_key": key, "run": run, "order": order, "attempts": attempts})
@@ -824,6 +874,7 @@ def main():
 
     s = sub.add_parser("rewrite", help="LLM 쿼리 재작성 → data/query_rewrites.csv")
     s.add_argument("--out", type=Path, default=QUERY_REWRITES)
+    s.add_argument("--prompt", choices=sorted(REWRITE_PROMPTS), default="v1", help="재작성 프롬프트 버전")
     llm_options(s, SELECT_MODEL)
 
     s = sub.add_parser("retrieve", help="후보 검색 → data/retrieval_candidates.csv")
@@ -834,11 +885,13 @@ def main():
     s.add_argument("--per-head", type=int, default=6)
     s.add_argument("--rerank", action="store_true", help="크로스 인코더로 후보 재정렬")
     s.add_argument("--rerank-pool", type=int, default=80)
+    s.add_argument("--keep-rrf", type=int, default=0, help="재순위화와 관계없이 남길 RRF 상위 후보 수")
 
     s = sub.add_parser("llm-match", help="선택 모델 다수결 → results/vnutri_fndds_map_select.csv")
     s.add_argument("--out", type=Path, default=MAPPING_SELECT)
     s.add_argument("--top", type=int, default=30, help="LLM 에 보여 줄 후보 수")
     s.add_argument("--runs", type=int, default=5, help="후보 순서를 섞어 실행할 횟수")
+    s.add_argument("--rules", choices=sorted(RULE_SETS), default="v1", help="판단 규칙 버전")
     s.add_argument("--seed", type=int, default=0)
     llm_options(s, SELECT_MODEL)
 
@@ -847,6 +900,7 @@ def main():
     s.add_argument("--out", type=Path, default=MAPPING)
     s.add_argument("--top", type=int, default=30)
     s.add_argument("--runs", type=int, default=1, help="후보 순서를 섞어 검토할 횟수 (다수결)")
+    s.add_argument("--rules", choices=sorted(RULE_SETS), default="v1", help="판단 규칙 버전")
     s.add_argument("--none-policy", choices=["none", "keep"], default="none",
                    help="검토 모델이 '맞는 후보 없음'이라고 할 때: none 으로 바꿀지, 선택 결과를 유지할지")
     s.add_argument("--seed", type=int, default=0)
@@ -878,13 +932,13 @@ def main():
     if a.command == "prepare":
         prepare()
     elif a.command == "rewrite":
-        rewrite(a.out, a.model, a.quantize, a.gpu)
+        rewrite(a.out, a.model, a.quantize, a.gpu, a.prompt)
     elif a.command == "retrieve":
-        retrieve(a.out, a.model, a.k, a.per_head, a.rewrites, a.rerank, a.rerank_pool)
+        retrieve(a.out, a.model, a.k, a.per_head, a.rewrites, a.rerank, a.rerank_pool, a.keep_rrf)
     elif a.command == "llm-match":
-        llm_match(a.out, a.model, a.top, a.runs, a.seed, a.quantize, a.gpu)
+        llm_match(a.out, a.model, a.top, a.runs, a.seed, a.quantize, a.gpu, a.rules)
     elif a.command == "llm-review":
-        llm_review(a.selection, a.out, a.model, a.top, a.quantize, a.gpu, a.runs, a.seed, a.none_policy)
+        llm_review(a.selection, a.out, a.model, a.top, a.quantize, a.gpu, a.runs, a.seed, a.none_policy, a.rules)
     elif a.command == "judge":
         judge(a.mappings, a.out_dir, a.model, a.quantize, a.gpu)
     elif a.command == "evaluate":

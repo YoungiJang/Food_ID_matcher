@@ -73,11 +73,20 @@ def main():
                                                                    "merges.txt", "vocab.json"])
 
     k = config["k"]
-    run("retrieve", "-k", k, *(["--rerank"] if config.get("rerank") else []))
+    rewrites = ROOT / "data" / "query_rewrites.csv"
+    if config.get("rewrite_prompt") or config.get("rewrite_model"):  # 이 단계 전용 쿼리 재작성
+        rewrites = out / "query_rewrites.csv"
+        model = config.get("rewrite_model", "Qwen/Qwen2.5-14B-Instruct")
+        run("rewrite", "--out", rewrites, "--model", model, "--prompt", config.get("rewrite_prompt", "v1"),
+            "--quantize", "4bit" if "32B" in model else "8bit")
+    run("retrieve", "-k", k, "--rewrites", rewrites, "--keep-rrf", config.get("keep_rrf", 0),
+        *(["--rerank"] if config.get("rerank") else []))
     (out / "retrieval_candidates.csv").write_bytes((ROOT / "data" / "retrieval_candidates.csv").read_bytes())
     run("llm-match", "--top", k, "--model", config["select_model"], "--quantize", config["select_quantize"],
+        "--rules", config.get("rules", "v1"),
         "--out", out / "vnutri_fndds_map_select.csv")
     run("llm-review", "--top", k, "--runs", config.get("review_runs", 1), "--none-policy", config.get("none_policy", "none"),
+        "--rules", config.get("rules", "v1"),
         "--selection", out / "vnutri_fndds_map_select.csv", "--out", out / MAP)
     run("evaluate", "--mapping", out / MAP, "--out", out / "eval_report.json")
 

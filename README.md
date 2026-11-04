@@ -58,9 +58,10 @@ python -m venv .venv
 PY=.venv/bin/python
 $PY food_matcher.py rewrite                       # 1. 레시피마다 FNDDS 식 영문 설명 생성 → data/query_rewrites.csv
 $PY food_matcher.py retrieve -k 40 --rerank       # 2. 후보 40개 검색        → data/retrieval_candidates.csv
-$PY food_matcher.py llm-match --top 40 \
+$PY food_matcher.py llm-match --top 40 --rules v2 \
     --model Qwen/Qwen2.5-32B-Instruct --quantize 4bit   # 3. 선택 (5회 다수결)  → results/vnutri_fndds_map_select.csv
-$PY food_matcher.py llm-review --top 40           # 4. 검토, 최종 매핑 확정  → results/vnutri_fndds_map.csv
+$PY food_matcher.py llm-review --top 40 --rules v2 \
+    --none-policy keep                            # 4. 검토, 최종 매핑 확정  → results/vnutri_fndds_map.csv
 $PY food_matcher.py evaluate                      # 5. 지표 계산 (선택)      → results/eval_report.json
 $PY food_matcher.py judge results/vnutri_fndds_map.csv   # 6. 심사 점수 (선택) → results/judge/
 ```
@@ -72,7 +73,7 @@ $PY food_matcher.py judge results/vnutri_fndds_map.csv   # 6. 심사 점수 (선
 ```bash
 sbatch --gres=gpu:1 --mem=64G --time=12:00:00 -o run-%j.out --wrap "cd $PWD && .venv/bin/python food_matcher.py llm-match --top 40 --model Qwen/Qwen2.5-32B-Instruct --quantize 4bit"
 ```
-노드마다 홈 디렉터리가 따로라면, 저장소와 모델 캐시(`~/.cache/huggingface`)가 있는 노드를 `-w`로 고정하세요.
+노드마다 홈 디렉터리가 따로라면, 저장소와 모델 캐시(`~/.cache/huggingface`)가 있는 노드를 `-w`로 고정하세요. 모델 파일이 약 200GB라 홈 디스크가 작다면 `export HF_HOME=/큰/디스크/hf_cache`로 캐시 위치를 바꾸세요.
 
 ### 자동 실험
 `scripts/auto_experiment.py`는 지금까지 심사 점수가 가장 높은 실행의 설정에 변경 하나를 적용해 실행하고, 모든 실행을 다시 채점합니다. 기준이 될 실행이 필요하므로, 위 절차로 만든 결과를 먼저 `results/<이름>/`에 `config.json`과 함께 두고 한 번 채점해야 합니다.
@@ -156,7 +157,11 @@ V-Nutri 레시피 48종 (dish_id 51개)
 
 | 실행 | 설정 | 심사 평균 | 4점 이상 | 매칭 없음 |
 |---|---|---|---|---|
-| **v5 (2장의 설정)** | Qwen-32B 선택 + phi-4 검토, 재순위화, 후보 40개 | **3.31** | 48% | 7 |
+| **v8 (2장의 설정, 최종)** | v7 + 판단 규칙 v2 (원재료 선택 금지, 조리 방식 일치) | **3.60** | 48% | 0 |
+| v10 | v8 + 재순위화와 관계없이 RRF 상위 15개 유지 | 3.58 | 48% | 0 |
+| v7 | v5 + 검토가 거부해도 근거 없으면 선택 유지 (`--none-policy keep`) | 3.58 | 48% | 0 |
+| v9 | v8 + 쿼리 재작성을 32B, 설명 4개로 | 3.48 | 44% | 0 |
+| v5 | Qwen-32B 선택 + phi-4 검토, 재순위화, 후보 40개 | 3.31 | 48% | 7 |
 | v4 | 재순위화 없음 | 3.10 | 42% | 11 |
 | baseline | Qwen-14B, 손으로 쓴 쿼리, 후보 30개 | 3.17 | 46% | 11 |
 | reference/b_claude_code | (참고) 같은 후보에서 Claude Code가 판단 | 3.52 | 46% | 2 |
